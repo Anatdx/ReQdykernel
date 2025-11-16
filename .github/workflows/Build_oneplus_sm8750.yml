@@ -313,8 +313,9 @@ jobs:
           cd KernelSU
 
           KSU_VERSION=$(expr "$(git rev-list --count main)" + 37185 2>/dev/null || echo 114514)
-          echo "KSU_API_VERSION=$KSU_VERSION" >> $GITHUB_ENV
-          VERSION_FULL="v$KSU_API_VERSION@Anatdx"
+          KSU_API_VERSION="$KSU_VERSION"
+          echo "KSU_API_VERSION=$KSU_API_VERSION" >> $GITHUB_ENV
+          VERSION_FULL="v${KSU_API_VERSION}@Anatdx"
 
           # 清理并写入 Makefile 版本信息
           sed -i '/define get_ksu_version_full/,/endef/d' kernel/Makefile
@@ -337,8 +338,7 @@ jobs:
             END {if (!inserted) print def}
           ' kernel/Makefile > kernel/Makefile.tmp && mv kernel/Makefile.tmp kernel/Makefile
 
-          KSU_VERSION=$(expr $(git rev-list --count main 2>/dev/null || echo 13000) + 37185)
-          echo "KSUVER=$KSU_VERSION" >> $GITHUB_ENV
+          echo "KSUVER=$KSU_API_VERSION" >> $GITHUB_ENV
 
           echo "::group::最终 Makefile 中版本信息及部分调试结果预览"
           grep -A10 "REPO_OWNER" kernel/Makefile
