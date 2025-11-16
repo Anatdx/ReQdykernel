@@ -233,7 +233,41 @@ jobs:
           else
             echo "未安装 ccache，跳过"
           fi
+      
+      - name: Kernel Version Handling
+        run: |
+          cd kernel_workspace/kernel_platform
+          # 获取内核 Android 版本号(KANDROID_VERSION)以及内核版本号(KERNEL_VERSION)
+          for f in ./common/build.config.constants ./common/build.config.common; do
+            if [ -f "$f" ]; then
+              BRANCH=$(grep -m1 '^BRANCH=' "$f" | cut -d= -f2)
+              [ -n "$BRANCH" ] && break
+            fi
+          done
 
+          if [ -n "$BRANCH" ]; then
+            echo "KANDROID_VERSION=${BRANCH%-*}" >> $GITHUB_ENV
+            echo "KERNEL_VERSION=${BRANCH#*-}" >> $GITHUB_ENV
+          else
+            echo "No BRANCH found in build.config files"
+          fi
+
+          # 从 Makefile 获取完整内核版本号(TKERNEL_VERSION)以及可选的修改内核等级
+          ORIG_VERSION=$(awk '/^VERSION =/ {v=$3} /^PATCHLEVEL =/ {p=$3} /^SUBLEVEL =/ {s=$3} END {print v"."p"."s}' ./common/Makefile)
+
+          # 强制修改 SUBLEVEL(内核等级)，默认关闭
+          # sed -i 's/^SUBLEVEL[[:space:]]*=[[:space:]]*.*/SUBLEVEL = 99/' ./common/Makefile
+
+          # 读取修改后的版本
+          NEW_VERSION=$(awk '/^VERSION =/ {v=$3} /^PATCHLEVEL =/ {p=$3} /^SUBLEVEL =/ {s=$3} END {print v"."p"."s}' ./common/Makefile)
+
+          if [ "$ORIG_VERSION" != "$NEW_VERSION" ]; then
+            echo "Kernel Version:$ORIG_VERSION->$NEW_VERSION"
+            echo "TKERNEL_VERSION=$NEW_VERSION" >> $GITHUB_ENV
+          else
+            echo "Kernel Version:$ORIG_VERSION No changes"
+            echo "TKERNEL_VERSION=$ORIG_VERSION" >> $GITHUB_ENV
+          fi
 
       - name: 📥 Install repo tool (下载repo工具)
         run: |
@@ -276,16 +310,121 @@ jobs:
           curl -LSs "https://raw.githubusercontent.com/SukiSU-Ultra/SukiSU-Ultra/main/kernel/setup.sh" -o setup.sh
           bash setup.sh susfs-main
           cd KernelSU
-          KSU_VERSION=$(expr "$(git rev-list --count main)" + 37185 2>/dev/null || echo 114514)
-          echo "KSUVER=$KSU_VERSION" >> "$GITHUB_ENV"
-          cp "${GITHUB_WORKSPACE}/.github/workflows/Bin/setup.bin" ./
-          chmod +x setup.bin
-          if [ ! -f "kernel/Makefile" ]; then
-            echo "::error ::kernel/Makefile"
-            ls -la
-            exit 1
+
+          KSU_API_VERSION=$(curl -fsSL "https://raw.githubusercontent.com/SukiSU-Ultra/SukiSU-Ultra/$BRANCH_NAME/kernel/Makefile" | \
+            grep -m1 "KSU_VERSION_API :=" | awk -F'= ' '{print $2}' | tr -d '[:space:]')
+          if [[ -z "$KSU_API_VERSION" || "$(printf '%s\n' "$KSU_API_VERSION" "3.1.7" | sort -V | head -n1)" != "3.1.7" ]]; then
+            KSU_API_VERSION="3.1.7"
           fi
-          ./setup.bin
+          echo "KSU_API_VERSION=$KSU_API_VERSION" >> $GITHUB_ENV
+
+          GIT_HASH=$(git rev-parse --short HEAD)
+          echo "GIT_HASH=$GIT_HASH"
+
+          # 组装版本号
+          if [[ -n "$MANUAL_HASH" ]]; then
+            USE_HASH="$SHORT_HASH"
+          else
+            USE_HASH="$GIT_HASH"
+          fi
+          if [[ -z "$CUSTOM_TAG" ]]; then
+            VERSION_FULL="v$KSU_API_VERSION-$USE_HASH@$BRANCH_NAME"
+          else
+            VERSION_FULL="v$KSU_API_VERSION-$CUSTOM_TAG@$BRANCH_NAME[$USE_HASH]"
+          fi
+
+          # 清理并写入 Makefile 版本信息
+          sed -i '/define get_ksu_version_full/,/endef/d' kernel/Makefile
+          sed -i '/KSU_VERSION_API :=/d' kernel/Makefile
+          sed -i '/KSU_VERSION_FULL :=/d' kernel/Makefile
+
+          VERSION_DEFINITIONS=$(cat <<EOF
+            define get_ksu_version_full
+            $VERSION_FULL
+            endef
+
+            KSU_VERSION_API := $KSU_API_VERSION
+            KSU_VERSION_FULL := $VERSION_FULL
+          EOF
+          )
+
+          awk -v def="$VERSION_DEFINITIONS" '
+            /REPO_OWNER :=/ {print; print def; inserted=1; next}
+            1
+            END {if (!inserted) print def}
+          ' kernel/Makefile > kernel/Makefile.tmp && mv kernel/Makefile.tmp kernel/Makefile
+
+          KSU_VERSION=$(expr $(git rev-list --count main 2>/dev/null || echo 13000) + 37185)
+          echo "KSUVER=$KSU_VERSION" >> $GITHUB_ENV
+
+          echo "::group::最终 Makefile 中版本信息及部分调试结果预览"
+          grep -A10 "REPO_OWNER" kernel/Makefile
+          grep "KSU_VERSION_FULL" kernel/Makefile
+          echo "::endgroup::"
+
+      - name: Apply Patches SukiSU Ultra
+        env:
+          FILE: ${{ github.event.inputs.DEVICES_NAME }}
+        run: |
+          cd kernel_workspace
+          git clone https://gitlab.com/simonpunk/susfs4ksu.git -b gki-${{ env.KANDROID_VERSION }}-${{ env.KERNEL_VERSION }}
+          git clone https://github.com/ShirkNeko/SukiSU_patch.git
+          cd kernel_platform
+          echo "正在拉取susfs补丁"
+          cp ../susfs4ksu/kernel_patches/50_add_susfs_in_gki-${{ env.KANDROID_VERSION }}-${{ env.KERNEL_VERSION }}.patch ./common/
+          cp ../susfs4ksu/kernel_patches/fs/* ./common/fs/
+          cp ../susfs4ksu/kernel_patches/include/linux/* ./common/include/linux/
+
+          cd ./common
+          GKI_V="${{ env.KANDROID_VERSION }}-${{ env.KERNEL_VERSION }}"
+          SUBLEVEL=$(grep '^SUBLEVEL *=' Makefile | head -n1 | cut -d= -f2 | tr -d ' ')
+
+          TRUSTY_EXISTS="false"
+          if [[ "${{ env.KERNEL_VERSION }}" == "6.6" ]]; then
+            if grep -q 'common-modules/trusty' "$GITHUB_WORKSPACE/.repo/manifests_fallback/${FILE}.xml"; then
+              TRUSTY_EXISTS="true"
+            fi
+            echo "trusty_exists=$TRUSTY_EXISTS" >> $GITHUB_OUTPUT
+
+            if [[ "$TRUSTY_EXISTS" == "false" && "$(printf '%s\n' "${{ env.TKERNEL_VERSION }}" "6.6.30" | sort -V | head -n1)" = "${{ env.TKERNEL_VERSION }}" ]]; then
+              echo "修复内核版本6.6部分机型缺失Trusty OS导致的susfs的报错"
+              sed -i 's/-32,12 +32,38/-32,11 +32,37/g' 50_add_susfs_in_gki-${{ env.KANDROID_VERSION }}-${{ env.KERNEL_VERSION }}.patch
+              sed -i '/#include <trace\/hooks\/fs.h>/d' 50_add_susfs_in_gki-${{ env.KANDROID_VERSION }}-${{ env.KERNEL_VERSION }}.patch
+            fi
+          fi
+          # Fake Patch to fix failures
+          fake_patched=0
+          if [ "$GKI_V" = "android15-6.6" ]; then
+            if ! grep -qxF $'\tunsigned int nr_subpages = __PAGE_SIZE / PAGE_SIZE;' ./fs/proc/task_mmu.c; then
+              echo "未找到 nr_subpages,正在进行补丁修复"
+              sed -i -e '/int ret = 0, copied = 0;/a \\tunsigned int nr_subpages \= __PAGE_SIZE \/ PAGE_SIZE;' -e '/int ret = 0, copied = 0;/a \\tpagemap_entry_t \*res = NULL;' ./fs/proc/task_mmu.c
+              fake_patched=1
+            fi
+          fi
+          if [ "$GKI_V" = "android12-5.10" ] || [ "$GKI_V" = "android13-5.15" ]; then
+            if ! grep -qxF $'\tif (!vma_pages(vma))' ./fs/proc/task_mmu.c; then
+              echo "未找到 vma_pages,正在进行补丁修复"
+              fake_patched=1
+            fi
+          fi
+
+          echo "正在打susfs补丁"
+          patch -p1 < 50_add_susfs_in_gki-${{ env.KANDROID_VERSION }}-${{ env.KERNEL_VERSION }}.patch || true
+          echo "susfs_patch完成"
+
+          # Revert
+          if [ "$fake_patched" = 1 ]; then
+            if [ "$GKI_V" = "android15-6.6" ]; then
+              if grep -qxF $'\tunsigned int nr_subpages = __PAGE_SIZE / PAGE_SIZE;' ./fs/proc/task_mmu.c; then
+                sed -i -e '/unsigned int nr_subpages \= __PAGE_SIZE \/ PAGE_SIZE;/d' -e '/pagemap_entry_t \*res = NULL;/d' ./fs/proc/task_mmu.c
+              fi
+            fi
+            if [ "$GKI_V" = "android12-5.10" ] || [ "$GKI_V" = "android13-5.15" ]; then
+              if grep -qxF $'\t\tgoto show_pad;' ./fs/proc/task_mmu.c; then
+                sed -i -e 's/goto show_pad;/return 0;/' ./fs/proc/task_mmu.c
+              fi
+            fi
+          fi
 
             
       - name: 🔧 Set up SUSFS (配置 SUSFS)
