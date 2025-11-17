@@ -269,7 +269,7 @@ jobs:
           sed -i '/^config LSM$/,/^help$/{ /^[[:space:]]*default/ { /baseband_guard/! s/lockdown/lockdown,baseband_guard/ } }' ./security/Kconfig
           
 
-      - name: Kernel Version Handling
+      - name: 📥 Kernel Version Handling
         run: |
           cd kernel_workspace/kernel_platform
           # 获取内核 Android 版本号(KANDROID_VERSION)以及内核版本号(KERNEL_VERSION)
