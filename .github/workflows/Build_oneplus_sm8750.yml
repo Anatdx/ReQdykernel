@@ -109,9 +109,9 @@ jobs:
               echo "SCHED_FILE=oneplus_13_b" >> $GITHUB_ENV
               ;;
           esac
-          if [ "${{ env.KEEP_ORIGINAL_SETTINGS }}" = "false" ] && [ -n "${{ env.CUSTOM_KERNEL_SUFFIX }}" ]; then
-            echo "使用自定义名称: $custom_kernel_suffix"
-            echo "DEFAULT_SUFFIX=$custom_kernel_suffix" >> $GITHUB_ENV
+          if [ "${{ env.KEEP_ORIGINAL_SETTINGS }}" = "false" ] && [ -n "${{ github.event.inputs.custom_kernel_suffix }}" ]; then
+            echo "使用自定义名称: ${{ github.event.inputs.custom_kernel_suffix }}"
+            echo "DEFAULT_SUFFIX=${{ github.event.inputs.custom_kernel_suffix }}" >> $GITHUB_ENV
           else
           case "${{ env.DEVICES_NAME }}" in
             oneplus_pad_2_pro)
@@ -127,10 +127,11 @@ jobs:
               echo 'DEFAULT_SUFFIX=-android15-8-g29d86c5fc9dd-abogki428889875-4k' >> $GITHUB_ENV
               ;;
           esac
+          echo "使用原官核名称：${{ env.DEFAULT_SUFFIX }}"
           fi
-          if [ "${{ env.KEEP_ORIGINAL_SETTINGS }}" = "false" ] && [ -n "${{ env.CUSTOM_KERNEL_TIME }}" ]; then
-            echo "使用自定义构建时间: $CUSTOM_TIME"
-            echo "KERNEL_TIME=$CUSTOM_TIME" >> $GITHUB_ENV
+          if [ "${{ env.KEEP_ORIGINAL_SETTINGS }}" = "false" ] && [ -n "${{ github.event.inputs.custom_kernel_time }}" ]; then
+            echo "使用自定义构建时间: ${{ github.event.inputs.custom_kernel_time }}"
+            echo "KERNEL_TIME=${{ github.event.inputs.custom_kernel_time }}" >> $GITHUB_ENV
           else
             case "${{ env.DEVICES_NAME }}" in
               oneplus_pad_2_pro)
@@ -146,6 +147,7 @@ jobs:
                 echo 'KERNEL_TIME=Tue Jul  1 19:48:18 UTC 2025' >> $GITHUB_ENV
                 ;;
             esac
+            echo "使用官核时间: ${{ env.KERNEL_TIME }}"
           fi
           
       - name: 🚀 Maximize Build Space  (最大化构建空间)
