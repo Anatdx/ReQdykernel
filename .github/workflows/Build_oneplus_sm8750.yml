@@ -109,11 +109,8 @@ jobs:
               echo "SCHED_FILE=oneplus_13_b" >> $GITHUB_ENV
               ;;
           esac
-          if [ "${{ env.KEEP_ORIGINAL_SETTINGS }}" = "false" ] && [ -n "${{ github.event.inputs.custom_kernel_suffix }}" ]; then
-            echo "使用自定义名称: ${{ github.event.inputs.custom_kernel_suffix }}"
-            echo "DEFAULT_SUFFIX=${{ github.event.inputs.custom_kernel_suffix }}" >> $GITHUB_ENV
-          else
-          case "${{ env.DEVICES_NAME }}" in
+          if [ "${{ env.KEEP_ORIGINAL_SETTINGS }}" = "true" ] && [ -z "${{ github.event.inputs.custom_kernel_suffix }}" ]; then
+            case "${{ env.DEVICES_NAME }}" in
             oneplus_pad_2_pro)
               echo 'DEFAULT_SUFFIX=-android15-8-g5a0ffb447c1d-ab13771415-4k' >> $GITHUB_ENV
               ;;
@@ -127,12 +124,12 @@ jobs:
               echo 'DEFAULT_SUFFIX=-android15-8-g29d86c5fc9dd-abogki428889875-4k' >> $GITHUB_ENV
               ;;
           esac
-          echo "使用原官核名称：${{ env.DEFAULT_SUFFIX }}"
-          fi
-          if [ "${{ env.KEEP_ORIGINAL_SETTINGS }}" = "false" ] && [ -n "${{ github.event.inputs.custom_kernel_time }}" ]; then
-            echo "使用自定义构建时间: ${{ github.event.inputs.custom_kernel_time }}"
-            echo "KERNEL_TIME=${{ github.event.inputs.custom_kernel_time }}" >> $GITHUB_ENV
+            echo "使用原官核名称：${{ env.DEFAULT_SUFFIX }}"
           else
+            echo "使用自定义名称: ${{ github.event.inputs.custom_kernel_suffix }}"
+            echo "DEFAULT_SUFFIX=${{ github.event.inputs.custom_kernel_suffix }}" >> $GITHUB_ENV
+          fi
+          if [ "${{ env.KEEP_ORIGINAL_SETTINGS }}" = "true" ] && [ -z "${{ github.event.inputs.custom_kernel_time }}" ]; then
             case "${{ env.DEVICES_NAME }}" in
               oneplus_pad_2_pro)
                 echo 'KERNEL_TIME=Fri Jul 11 22:46:09 UTC 2025' >> $GITHUB_ENV
@@ -147,7 +144,10 @@ jobs:
                 echo 'KERNEL_TIME=Tue Jul  1 19:48:18 UTC 2025' >> $GITHUB_ENV
                 ;;
             esac
+          else
             echo "使用官核时间: ${{ env.KERNEL_TIME }}"
+            echo "使用自定义构建时间: ${{ github.event.inputs.custom_kernel_time }}"
+            echo "KERNEL_TIME=${{ github.event.inputs.custom_kernel_time }}" >> $GITHUB_ENV
           fi
           
       - name: 🚀 Maximize Build Space  (最大化构建空间)
