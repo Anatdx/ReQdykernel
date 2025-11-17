@@ -185,9 +185,9 @@ jobs:
         uses: actions/cache@v3
         with:
           path: ${{ env.HOME }}/apt-cache
-          key: ${{ runner.os }}-apt-qiudaoyu
+          key: ${{ runner.os }}-apt-Anatdx
           restore-keys: |
-            ${{ runner.os }}-apt-qiudaoyu
+            ${{ runner.os }}-apt-Anatdx
 
       - name: 📦 Install dependencies (安装依赖)
         run: |
@@ -312,10 +312,17 @@ jobs:
           bash setup.sh susfs-main
           cd KernelSU
 
-          KSU_VERSION=$(expr "$(git rev-list --count main)" + 37185 2>/dev/null || echo 114514)
-          KSU_API_VERSION="$KSU_VERSION"
+          KSU_API_VERSION=$(curl -fsSL "https://raw.githubusercontent.com/SukiSU-Ultra/SukiSU-Ultra/susfs-main/kernel/Makefile" | \
+            grep -m1 "KSU_VERSION_API :=" | awk -F'= ' '{print $2}' | tr -d '[:space:]')
+          if [[ -z "$KSU_API_VERSION" || "$(printf '%s\n' "$KSU_API_VERSION" "3.1.7" | sort -V | head -n1)" != "3.1.7" ]]; then
+            KSU_API_VERSION="3.1.7"
+          fi
           echo "KSU_API_VERSION=$KSU_API_VERSION" >> $GITHUB_ENV
-          VERSION_FULL="v${KSU_API_VERSION}@Anatdx"
+
+          GIT_HASH=$(git rev-parse --short HEAD)
+          echo "GIT_HASH=$GIT_HASH"
+
+          VERSION_FULL="v$KSU_API_VERSION-$GIT_HASH@Anatdx"
 
           # 清理并写入 Makefile 版本信息
           sed -i '/define get_ksu_version_full/,/endef/d' kernel/Makefile
@@ -338,15 +345,14 @@ jobs:
             END {if (!inserted) print def}
           ' kernel/Makefile > kernel/Makefile.tmp && mv kernel/Makefile.tmp kernel/Makefile
 
-          echo "KSUVER=$KSU_API_VERSION" >> $GITHUB_ENV
+          KSU_VERSION=$(expr $(git rev-list --count main 2>/dev/null || echo 13000) + 37185)
+          echo "KSUVER=$KSU_VERSION" >> $GITHUB_ENV
 
           echo "::group::最终 Makefile 中版本信息及部分调试结果预览"
           grep -A10 "REPO_OWNER" kernel/Makefile
           grep "KSU_VERSION_FULL" kernel/Makefile
           echo "::endgroup::"
 
-    
-            
       - name: 🔧 Set up SUSFS (配置 SUSFS)
         run: |
           cd kernel_workspace
@@ -364,9 +370,6 @@ jobs:
           fi
           ( cd common && patch -p1 < 50_add_susfs_in_gki-android15-6.6.patch ) || true
 
-
-
-          
       - name: 🔧 Set gki_defconfig (设置编译配置) 
         run: |
           cd kernel_workspace/kernel_platform
@@ -485,24 +488,16 @@ jobs:
           image_path=$(find "./kernel_workspace/kernel_platform/common/out/" -name "Image" | head -n 1)
           if [ -n "$image_path" ]; then
             dir1=$(dirname "$image_path")/
-            echo "使用 make 编译的统一路径，成功找到 Image 文件"
+            echo "成功找到 Image 文件"
           else
-            image_path=$(find "./kernel_workspace/kernel_platform/out/" -name "Image" | head -n 1)
-            if [ -n "$image_path" ]; then
-              dir2=$(dirname "$image_path")/
-              echo "使用官方脚本编译，成功找到 Image 文件"
-            else
               echo "未找到 Image 文件，构建失败" >&2
               exit 1
-            fi
           fi
           if [ -n "$image_path" ] && [ -f "$image_path" ]; then
             echo "Image file finally located at: $image_path"
             cp "$image_path" ./AnyKernel3/Image
             cp "$image_path" kernel_workspace/kernel_platform/out/Final-Image-Find/Image
           fi
-          
-
           
       - name: 📤 Upload AnyKernel3 (上传 Anykernel3)
         uses: actions/upload-artifact@v4
