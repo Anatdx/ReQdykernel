@@ -144,8 +144,8 @@ jobs:
                 echo 'KERNEL_TIME=Tue Jul  1 19:48:18 UTC 2025' >> $GITHUB_ENV
                 ;;
             esac
-          else
             echo "使用官核时间: ${{ env.KERNEL_TIME }}"
+          else
             echo "使用自定义构建时间: ${{ github.event.inputs.custom_kernel_time }}"
             echo "KERNEL_TIME=${{ github.event.inputs.custom_kernel_time }}" >> $GITHUB_ENV
           fi
