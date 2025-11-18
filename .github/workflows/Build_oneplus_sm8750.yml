@@ -592,9 +592,9 @@ jobs:
             - 内核版本号: ${{ env.FULL_VERSION }}
             - 编译时间: ${{ env.TIME_FORM }}
             - 特性：${{ env.KSU_BRANCH }} + SUSFS + 风驰内核
-            - 推荐系统：ColorOS 15 / RealmeUI 6.0
+            - 推荐系统：ColorOS 15/16
             ### ⏫️ 更新内容：
-            - 更新${{ env.KSU_BRANCH }}至最新版本（${{ env.KSUVER }}）
+            - 更新${{ env.KSU_BRANCH }}至最新版本（${{ env.KERNEL_VERSION }}）
           draft: false
           prerelease: false
           files: |
