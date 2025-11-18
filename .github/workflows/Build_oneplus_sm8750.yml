@@ -524,7 +524,7 @@ jobs:
             else
               echo "Downloading from: $artifact_url"
               curl -fL -H "Authorization: token $GITHUB_TOKEN" -o Manager.zip "$artifact_url"
-              unzip -j Manager.zip "*.apk" -d ./AnyKernel3/
+              unzip -j Manager.zip "*.apk" -d ./APK/
             fi
           fi
           
@@ -533,6 +533,12 @@ jobs:
         with:
          name: AK3_${{ env.KSUVER }}_${{ env.DEVICES_NAME }}_SuKiSU
          path: ./AnyKernel3/*
+
+      - name: 📤 Upload APK (上传 APK)
+        uses: actions/upload-artifact@v4
+        with:
+         name: SuKiSU_${{ env.KSUVER }}
+         path: ./APK/*.apk
 
   release:
     needs: build
@@ -543,11 +549,17 @@ jobs:
       actions: read
       
     steps:
-      - name: 下载 ZIP 工件
+      - name: 📤 Download AnyKernel3 (下载 Anykernel3)
         uses: actions/download-artifact@v4
         with:
-          name: Kernel_ZIP_Artifacts
-          path: ./release_zips
+          name: AK3_${{ env.KSUVER }}_${{ env.DEVICES_NAME }}_SuKiSU
+          path: ./release
+
+      - name: 📤 Download APK (下载 APK)
+        uses: actions/download-artifact@v4
+        with:
+          name: SuKiSU_${{ env.KSUVER }}
+          path: ./release
 
       - name: 设置环境变量
         run: |
@@ -586,5 +598,5 @@ jobs:
           draft: false
           prerelease: false
           files: |
-            release_zips/AnyKernel3_*.zip
-            release_zips/*.apk
+            release/*.zip
+            release/*.apk
