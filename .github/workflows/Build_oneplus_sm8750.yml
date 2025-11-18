@@ -103,16 +103,16 @@ jobs:
               echo "SCHED_FILE=oneplus_13_b" >> $GITHUB_ENV
               ;;
             realme_GT7)
-              echo "REPO_MANIFEST=oneplus_13_b" >> $GITHUB_ENV
-              echo "SCHED_FILE=oneplus_13_b" >> $GITHUB_ENV
+              echo "REPO_MANIFEST=realme_GT7pro" >> $GITHUB_ENV
+              echo "SCHED_FILE=none" >> $GITHUB_ENV
               ;;
             realme_GT7pro)
               echo "REPO_MANIFEST=realme_GT7pro" >> $GITHUB_ENV
               echo "SCHED_FILE=none" >> $GITHUB_ENV
               ;;
             realme_GT7pro_Speed)
-              echo "REPO_MANIFEST=oneplus_13_b" >> $GITHUB_ENV
-              echo "SCHED_FILE=oneplus_13_b" >> $GITHUB_ENV
+              echo "REPO_MANIFEST=realme_GT7pro" >> $GITHUB_ENV
+              echo "SCHED_FILE=none" >> $GITHUB_ENV
               ;;
           esac
           if [ "${{ env.KEEP_ORIGINAL_SETTINGS }}" = "true" ] && [ -z "${{ github.event.inputs.custom_kernel_suffix }}" ]; then
