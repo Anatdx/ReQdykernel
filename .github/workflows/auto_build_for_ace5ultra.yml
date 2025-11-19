@@ -142,18 +142,7 @@ jobs:
           echo "正在启用BBG基带守护…"
           curl -LSs https://raw.githubusercontent.com/vc-teahouse/Baseband-guard/main/setup.sh | bash
           sed -i '/^config LSM$/,/^help$/{ /^[[:space:]]*default/ { /baseband_guard/! s/lockdown/lockdown,baseband_guard/ } }' ./security/Kconfig
-          
-      - name: 🔧 Set Re-Kernel (添加Re-Kernel支持)
-        if: ${{ env.ENABLE_FEATURE_R }}
-        run: |
-          cd kernel_workspace/kernel_platform/common
-          echo "正在添加Re-Kernel支持…"
-          git clone https://github.com/Sakion-Team/Re-Kernel.git
-          cp -r Re-Kernel/Integrate/* ./ 
-          rm -rf Re-Kernel
-          chmod +x patches.sh
-          ./patches.sh
-
+     
       - name: ⚙️ Set SuKiSU Ultra (设置SuKiSU Ultra)
         run: |
           set -e
@@ -349,6 +338,15 @@ jobs:
             patch -p1 -F 3 < hmbird_patch.patch
             echo "OGKI转换GKI_patch完成"
           fi
+
+      - name: 🔧 Set Re-Kernel (添加Re-Kernel支持)
+        if: ${{ env.ENABLE_FEATURE_R }}
+        run: |
+          cd kernel_workspace/kernel_platform/common
+          echo "正在添加Re-Kernel支持…"
+          cp "${GITHUB_WORKSPACE}/.github/workflows/Bin/ReKernel.patch" ./ReKernel.patch
+          patch -p1 -F 3 < ./ReKernel.patch
+          echo "Re-Kernel patch完成"
 
       - name: 🔨 Build Kernel (构建内核)
         run: |
