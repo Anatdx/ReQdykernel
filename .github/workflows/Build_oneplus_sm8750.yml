@@ -178,7 +178,7 @@ jobs:
           else
             aria2c -s16 -x16 -k1M https://github.com/OnePlusOSS/android_kernel_common_oneplus_sm8750/archive/refs/heads/oneplus/${REPO_MANIFEST}.zip -o common.zip
             unzip -q common.zip && 
-            mv "android_kernel_common_oneplus_sm8750-oneplus-${REPO_BRANCH}" common
+            mv "android_kernel_common_oneplus_sm8750-oneplus-${REPO_MANIFEST}" common
           fi
             rm -rf common.zip 
           echo "正在克隆llvm-clang18工具链..."
