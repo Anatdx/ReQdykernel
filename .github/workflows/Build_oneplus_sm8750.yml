@@ -1,5 +1,9 @@
 name: Build_oneplus_sm8750
 on:
+  push:
+    branches:
+      - main
+
   workflow_dispatch:
     inputs:
       DEVICES_NAME:
@@ -68,14 +72,14 @@ jobs:
     name: Build_${{ github.event.inputs.DEVICES_NAME }}
     runs-on: ubuntu-latest
     env:
-      DEVICES_NAME:          ${{ github.event.inputs.DEVICES_NAME }}
-      KEEP_ORIGINAL_SETTINGS: ${{ github.event.inputs.keep_original_settings }}
-      CUSTOM_KERNEL_SUFFIX:   ${{ github.event.inputs.custom_kernel_suffix }}
-      CUSTOM_KERNEL_TIME:     ${{ github.event.inputs.custom_kernel_time }}
-      ENABLE_FEATURE_Z:       ${{ github.event.inputs.enable_feature_z }}
-      ENABLE_FEATURE_A:       ${{ github.event.inputs.enable_feature_a }}
-      ENABLE_FEATURE_B:       ${{ github.event.inputs.enable_feature_b }}
-      ENABLE_FEATURE_R:       ${{ github.event.inputs.enable_feature_r }}
+      DEVICES_NAME:          ${{ github.event.inputs.DEVICES_NAME || 'oneplus_ace5_ultra' }}
+      KEEP_ORIGINAL_SETTINGS: ${{ github.event.inputs.keep_original_settings || 'true' }}
+      CUSTOM_KERNEL_SUFFIX:   ${{ github.event.inputs.custom_kernel_suffix || '' }}
+      CUSTOM_KERNEL_TIME:     ${{ github.event.inputs.custom_kernel_time || '' }}
+      ENABLE_FEATURE_Z:       ${{ github.event.inputs.enable_feature_z || 'true' }}
+      ENABLE_FEATURE_A:       ${{ github.event.inputs.enable_feature_a || 'true' }}
+      ENABLE_FEATURE_B:       ${{ github.event.inputs.enable_feature_b || 'FQ_CODEL' }}
+      ENABLE_FEATURE_R:       ${{ github.event.inputs.enable_feature_r || 'true' }}
     steps:
       - uses: actions/checkout@v4
         with:
@@ -316,7 +320,7 @@ jobs:
 
       - name: 📥 Kernel Version Handling (获取内核版本)
         run: |
-          cd kernel_workspace/kernel_platform
+          cd kernel_workspace
           # 获取内核 Android 版本号(KANDROID_VERSION)以及内核版本号(KERNEL_VERSION)
           for f in ./common/build.config.constants ./common/build.config.common; do
             if [ -f "$f" ]; then
@@ -361,10 +365,7 @@ jobs:
           cp ./SukiSU_patch/69_hide_stuff.patch ./common/
           cd ./common
           patch -p1 < 50_add_susfs_in_gki-android15-6.6.patch || true
-
-
-
-          
+    
       - name: 🔧 Set gki_defconfig (设置编译配置) 
         run: |
           cd kernel_workspace
@@ -468,7 +469,7 @@ jobs:
       - name: 🔧 Set Re-Kernel (添加Re-Kernel支持)
         if: ${{ env.ENABLE_FEATURE_R }}
         run: |
-          cd kernel_workspace/kernel_platform/common
+          cd kernel_workspace/common
           echo "正在添加Re-Kernel支持…"
           cp "${GITHUB_WORKSPACE}/.github/workflows/Bin/ReKernel.patch" ./ReKernel.patch
           patch -p1 -F 3 < ./ReKernel.patch
@@ -533,13 +534,14 @@ jobs:
           LD_PRELOAD=$PRELOAD_LIBS stat ./Makefile
           echo "ccache状态："
           ccache -s
+
       - name: 📦 Make AnyKernel3 (创建Anykernel3)
         run: |
           git clone https://github.com/Anatdx/AnyKernel3 --depth=1
           rm -rf ./AnyKernel3/.git
-          mkdir -p kernel_workspace/kernel_platform/out/Final-Image-Find/
+          mkdir -p kernel_workspace/out/Final-Image-Find/
           dir1=""
-          image_path=$(find "./kernel_workspace/kernel_platform/common/out/" -name "Image" | head -n 1)
+          image_path=$(find "./kernel_workspace/common/out/" -name "Image" | head -n 1)
           if [ -n "$image_path" ]; then
             dir1=$(dirname "$image_path")/
             echo "成功找到 Image 文件"
@@ -550,7 +552,7 @@ jobs:
           if [ -n "$image_path" ] && [ -f "$image_path" ]; then
             echo "Image file finally located at: $image_path"
             cp "$image_path" ./AnyKernel3/Image
-            cp "$image_path" kernel_workspace/kernel_platform/out/Final-Image-Find/Image
+            cp "$image_path" kernel_workspace/out/Final-Image-Find/Image
             cd AnyKernel3
             zip -r ../AnyKernel3_SukiSU-Ultra_${{ env.KERNEL_VERSION }}.zip ./*
           fi
