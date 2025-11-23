@@ -250,10 +250,10 @@ jobs:
           echo "正在添加lz4 1.10.0 & zstd 1.5.7补丁…"
           cd kernel_workspace
           git clone https://github.com/cctv18/oppo_oplus_realme_sm8750.git
-          cp ./oppo_oplus_realme_sm8750/zram_patch/001-lz4.patch ./kernel_platform/common
-          cp ./oppo_oplus_realme_sm8750/zram_patch/lz4armv8.S ./kernel_platform/common/lib
-          cp ./oppo_oplus_realme_sm8750/zram_patch/002-zstd.patch ./kernel_platform/common/
-          cd ./kernel_platform/common
+          cp ./oppo_oplus_realme_sm8750/zram_patch/001-lz4.patch ./common
+          cp ./oppo_oplus_realme_sm8750/zram_patch/lz4armv8.S ./common/lib
+          cp ./oppo_oplus_realme_sm8750/zram_patch/002-zstd.patch ./common/
+          cd ./common
           git apply -p1 < 001-lz4.patch || true
           patch -p1 < 002-zstd.patch || true
           
@@ -367,7 +367,7 @@ jobs:
           
       - name: 🔧 Set gki_defconfig (设置编译配置) 
         run: |
-          cd kernel_workspace/kernel_platform
+          cd kernel_workspace
           echo "CONFIG_KSU=y" >> ./common/arch/arm64/configs/gki_defconfig
           echo "CONFIG_KPM=y" >> ./common/arch/arm64/configs/gki_defconfig
           echo "CONFIG_CRYPTO_LZ4=y" >> ./common/arch/arm64/configs/gki_defconfig
