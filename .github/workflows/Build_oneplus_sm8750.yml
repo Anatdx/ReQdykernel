@@ -320,7 +320,7 @@ jobs:
 
       - name: 📥 Kernel Version Handling (获取内核版本)
         run: |
-          cd kernel_workspace/kernel_platform
+          cd kernel_workspace
           # 获取内核 Android 版本号(KANDROID_VERSION)以及内核版本号(KERNEL_VERSION)
           for f in ./common/build.config.constants ./common/build.config.common; do
             if [ -f "$f" ]; then
