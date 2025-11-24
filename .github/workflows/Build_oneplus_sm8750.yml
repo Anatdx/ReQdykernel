@@ -108,7 +108,7 @@ jobs:
               echo "SCHED_FILE=oneplus_pad_2_pro_b" >> $GITHUB_ENV
               ;;
             oneplus_ace5_ultra)
-              echo "REPO_MANIFEST=sm8750_b_16.0.0_oneplus_13" >> $GITHUB_ENV
+              echo "REPO_MANIFEST=mt6991_v_15.0.2_ace5_ultra" >> $GITHUB_ENV
               echo "SCHED_FILE=oneplus_13_b" >> $GITHUB_ENV
               ;;
             realme_GT7)
@@ -179,12 +179,16 @@ jobs:
             aria2c -s16 -x16 -k1M https://github.com/realme-kernel-opensource/realme_GT7pro-AndroidB-common-source/archive/refs/heads/master.zip -o common.zip
             unzip -q common.zip && 
             mv "realme_GT7pro-AndroidB-common-source-master" common
+          elif [ "${DEVICES_NAME}" = "oneplus_ace5_ultra" ]; then
+            aria2c -s16 -x16 -k1M https://github.com/OnePlusOSS/android_kernel_oneplus_mt6991/archive/refs/heads/oneplus/${REPO_MANIFEST}.zip -o common.zip
+            unzip -q common.zip && 
+            mv "android_kernel_oneplus_mt6991-oneplus-${REPO_MANIFEST}" common
           else
             aria2c -s16 -x16 -k1M https://github.com/OnePlusOSS/android_kernel_common_oneplus_sm8750/archive/refs/heads/oneplus/${REPO_MANIFEST}.zip -o common.zip
             unzip -q common.zip && 
             mv "android_kernel_common_oneplus_sm8750-oneplus-${REPO_MANIFEST}" common
           fi
-            rm -rf common.zip 
+          rm -rf common.zip 
           echo "正在克隆llvm-clang18工具链..."
           mkdir -p clang18 &&
           aria2c -s16 -x16 -k1M https://github.com/cctv18/oneplus_sm8650_toolchain/releases/download/LLVM-Clang18-r510928/clang-r510928.zip -o clang.zip &&
@@ -365,7 +369,10 @@ jobs:
           cp ./SukiSU_patch/69_hide_stuff.patch ./common/
           cd ./common
           patch -p1 < 50_add_susfs_in_gki-android15-6.6.patch || true
-    
+
+
+
+          
       - name: 🔧 Set gki_defconfig (设置编译配置) 
         run: |
           cd kernel_workspace
