@@ -460,7 +460,7 @@ jobs:
             cd kernel_workspace/common
             if [ "${{ env.ENABLE_FEATURE_Z }}" = "true" ]; then
               if [ "${DEVICES_NAME}" = "oneplus_ace5_ultra" ] || [ "${DEVICES_NAME}" = "realme_GT7" ]; then
-                git clone https://github.com/Numbersf/SCHED_PATCH.git -b "mt991"
+                git clone https://github.com/Numbersf/SCHED_PATCH.git -b "mt6991"
               else
                 git clone https://github.com/Numbersf/SCHED_PATCH.git -b "sm8750"
               fi
