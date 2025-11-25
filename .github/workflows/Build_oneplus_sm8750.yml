@@ -20,6 +20,7 @@ on:
           - 'realme_GT7'
           - 'realme_GT7pro'
           - 'realme_GT7pro_Speed'
+          - 'realme_GT8'
         default: 'oneplus_ace5_pro'
 
       keep_original_settings:
@@ -109,10 +110,11 @@ jobs:
               ;;
             oneplus_ace5_ultra)
               echo "REPO_MANIFEST=mt6991_v_15.0.2_ace5_ultra" >> $GITHUB_ENV
-              echo "SCHED_FILE=oneplus_13_b" >> $GITHUB_ENV
+              echo "SCHED_FILE=oneplus_ace5_ultra" >> $GITHUB_ENV
               ;;
             realme_GT7)
-              echo "SCHED_FILE=none" >> $GITHUB_ENV
+              echo "REPO_MANIFEST=mt6991_v_15.0.2_ace5_ultra" >> $GITHUB_ENV
+              echo "SCHED_FILE=oneplus_ace5_ultra" >> $GITHUB_ENV
               ;;
             realme_GT7pro)
               echo "SCHED_FILE=none" >> $GITHUB_ENV
@@ -120,6 +122,8 @@ jobs:
             realme_GT7pro_Speed)
               echo "SCHED_FILE=none" >> $GITHUB_ENV
               ;;
+            realme_GT8)
+              echo "SCHED_FILE=none" >> $GITHUB_ENV
           esac
           if [ "${{ env.KEEP_ORIGINAL_SETTINGS }}" = "true" ] && [ -z "${{ github.event.inputs.custom_kernel_suffix }}" ]; then
             case "${{ env.DEVICES_NAME }}" in
@@ -132,7 +136,7 @@ jobs:
             realme_GT7)
               echo 'DEFAULT_SUFFIX=-android15-8-gd43086512890-abogki423825152-4k' >> $GITHUB_ENV
               ;;
-            oneplus_ace5_pro | oneplus_ace_6 | oneplus_13t | oneplus_ace5_ultra | realme_GT7pro_Speed | realme_GT7pro)
+            oneplus_ace5_pro | oneplus_ace_6 | oneplus_13t | oneplus_ace5_ultra | realme_GT7pro_Speed | realme_GT7pro | realme_GT8)
               echo 'DEFAULT_SUFFIX=-android15-8-g29d86c5fc9dd-abogki428889875-4k' >> $GITHUB_ENV
               ;;
           esac
@@ -152,7 +156,7 @@ jobs:
               realme_GT7)
                 echo 'KERNEL_TIME=Tue Jun 10 12:12:23 UTC 2025' >> $GITHUB_ENV
                 ;;
-              oneplus_ace5_pro | oneplus_ace_6 | oneplus_13t | oneplus_ace5_ultra | realme_GT7pro_Speed | realme_GT7pro)
+              oneplus_ace5_pro | oneplus_ace_6 | oneplus_13t | oneplus_ace5_ultra | realme_GT7pro_Speed | realme_GT7pro | realme_GT8)
                 echo 'KERNEL_TIME=Tue Jul  1 19:48:18 UTC 2025' >> $GITHUB_ENV
                 ;;
             esac
@@ -175,11 +179,11 @@ jobs:
           sudo apt update &&
           sudo apt-get install -y --no-install-recommends binutils python-is-python3 libssl-dev libelf-dev dos2unix ccache p7zip-full &
           echo "正在克隆源码仓库..."
-          if [ "${DEVICES_NAME}" = "realme_GT7" ] || [ "${DEVICES_NAME}" = "realme_GT7pro" ] || [ "${DEVICES_NAME}" = "realme_GT7pro_Speed" ]; then
+          if [ "${DEVICES_NAME}" = "realme_GT7pro" ] || [ "${DEVICES_NAME}" = "realme_GT7pro_Speed" ] || [ "${DEVICES_NAME}" = "realme_GT8" ]; then
             aria2c -s16 -x16 -k1M https://github.com/realme-kernel-opensource/realme_GT7pro-AndroidB-common-source/archive/refs/heads/master.zip -o common.zip
             unzip -q common.zip && 
             mv "realme_GT7pro-AndroidB-common-source-master" common
-          elif [ "${DEVICES_NAME}" = "oneplus_ace5_ultra" ]; then
+          elif [ "${DEVICES_NAME}" = "oneplus_ace5_ultra" ] || [ "${DEVICES_NAME}" = "realme_GT7" ]; then
             aria2c -s16 -x16 -k1M https://github.com/OnePlusOSS/android_kernel_oneplus_mt6991/archive/refs/heads/oneplus/${REPO_MANIFEST}.zip -o common.zip
             unzip -q common.zip && 
             mv "android_kernel_oneplus_mt6991-oneplus-${REPO_MANIFEST}" common
@@ -455,7 +459,12 @@ jobs:
           else
             cd kernel_workspace/common
             if [ "${{ env.ENABLE_FEATURE_Z }}" = "true" ]; then
-              git clone https://github.com/Numbersf/SCHED_PATCH.git -b "sm8750"
+              if [ "${DEVICES_NAME}" = "oneplus_ace5_ultra" ] || [ "${DEVICES_NAME}" = "realme_GT7" ]; then
+                echo 'SCHED_NRANCH=mt6991' >> $GITHUB_ENV
+              else
+                echo 'SCHED_NRANCH=sm8750' >> $GITHUB_ENV
+              fi
+              git clone https://github.com/Numbersf/SCHED_PATCH.git -b "${{ env.SCHED_NRANCH }}"
               echo "正在拉取风驰补丁"
               cp ./SCHED_PATCH/fengchi_${{env.SCHED_FILE}}.patch ./
               if [[ -f "fengchi_${{env.SCHED_FILE}}.patch" ]]; then
