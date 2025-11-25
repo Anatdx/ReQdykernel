@@ -460,11 +460,10 @@ jobs:
             cd kernel_workspace/common
             if [ "${{ env.ENABLE_FEATURE_Z }}" = "true" ]; then
               if [ "${DEVICES_NAME}" = "oneplus_ace5_ultra" ] || [ "${DEVICES_NAME}" = "realme_GT7" ]; then
-                echo 'SCHED_NRANCH=mt6991' >> $GITHUB_ENV
+                git clone https://github.com/Numbersf/SCHED_PATCH.git -b "mt991"
               else
-                echo 'SCHED_NRANCH=sm8750' >> $GITHUB_ENV
+                git clone https://github.com/Numbersf/SCHED_PATCH.git -b "sm8750"
               fi
-              git clone https://github.com/Numbersf/SCHED_PATCH.git -b "${{ env.SCHED_NRANCH }}"
               echo "正在拉取风驰补丁"
               cp ./SCHED_PATCH/fengchi_${{env.SCHED_FILE}}.patch ./
               if [[ -f "fengchi_${{env.SCHED_FILE}}.patch" ]]; then
