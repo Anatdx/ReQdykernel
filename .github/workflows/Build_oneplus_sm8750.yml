@@ -1,4 +1,10 @@
 name: Build_oneplus_sm8750
+
+env:
+  TZ: Asia/Shanghai
+  ANDROID_VERSION: 'android15'
+  KERNEL_VERSION: '6.6'
+
 on:
   push:
     branches:
@@ -31,6 +37,11 @@ on:
 
       custom_kernel_suffix:
         description: "✏️ 自定义内核名称- 仅在取消勾选'保持原设置'时有效(不懂请保持默认)"
+        required: false
+        default: ''
+
+      custom_kernel_sublevel:
+        description: "✏️ 自定义内核等级(小号)- 仅在取消勾选'保持原设置'时有效(不懂请保持默认)"
         required: false
         default: ''
       
@@ -70,12 +81,13 @@ on:
 
 jobs:
   build:
-    name: Build_${{ github.event.inputs.DEVICES_NAME }}
+    name: Build_${{ github.event.inputs.DEVICES_NAME || 'oneplus_ace5_ultra_AUTO' }}
     runs-on: ubuntu-latest
     env:
       DEVICES_NAME:          ${{ github.event.inputs.DEVICES_NAME || 'oneplus_ace5_ultra' }}
-      KEEP_ORIGINAL_SETTINGS: ${{ github.event.inputs.keep_original_settings || 'true' }}
+      KEEP_ORIGINAL_SETTINGS: ${{ github.event.inputs.keep_original_settings || 'false' }}
       CUSTOM_KERNEL_SUFFIX:   ${{ github.event.inputs.custom_kernel_suffix || '' }}
+      CUSTOM_KERNEL_SUBLEVEL: ${{ github.event.inputs.custom_kernel_sublevel || '66' }}
       CUSTOM_KERNEL_TIME:     ${{ github.event.inputs.custom_kernel_time || '' }}
       ENABLE_FEATURE_Z:       ${{ github.event.inputs.enable_feature_z || 'true' }}
       ENABLE_FEATURE_A:       ${{ github.event.inputs.enable_feature_a || 'true' }}
@@ -348,17 +360,23 @@ jobs:
           ORIG_VERSION=$(awk '/^VERSION =/ {v=$3} /^PATCHLEVEL =/ {p=$3} /^SUBLEVEL =/ {s=$3} END {print v"."p"."s}' ./common/Makefile)
 
           # 强制修改 SUBLEVEL(内核等级)，默认关闭
-          # sed -i 's/^SUBLEVEL[[:space:]]*=[[:space:]]*.*/SUBLEVEL = 99/' ./common/Makefile
+          if [ "${{ env.KEEP_ORIGINAL_SETTINGS }}" = "false" ] && [ -z "${{ env.CUSTOM_KERNEL_SUBLEVEL }}" ]; then
+            echo "自定义内核等级: ${{ env.CUSTOM_KERNEL_SUBLEVEL }}"
+            sed -i "s/^SUBLEVEL[[:space:]]*=[[:space:]]*.*/SUBLEVEL = ${{ env.CUSTOM_KERNEL_SUBLEVEL }}/" ./common/Makefile
+          fi
 
           # 读取修改后的版本
           NEW_VERSION=$(awk '/^VERSION =/ {v=$3} /^PATCHLEVEL =/ {p=$3} /^SUBLEVEL =/ {s=$3} END {print v"."p"."s}' ./common/Makefile)
+          NEW_SUBLEVEL=$(awk '/^SUBLEVEL =/ {s=$3} END {print s}' ./common/Makefile)
 
           if [ "$ORIG_VERSION" != "$NEW_VERSION" ]; then
             echo "Kernel Version:$ORIG_VERSION->$NEW_VERSION"
             echo "TKERNEL_VERSION=$NEW_VERSION" >> $GITHUB_ENV
+            echo "KERNEL_SUBLEVEL=$NEW_SUBLEVEL" >> $GITHUB_ENV
           else
             echo "Kernel Version:$ORIG_VERSION No changes"
             echo "TKERNEL_VERSION=$ORIG_VERSION" >> $GITHUB_ENV
+            echo "KERNEL_SUBLEVEL=$NEW_SUBLEVEL" >> $GITHUB_ENV
           fi
 
       - name: 🔧 Set up SUSFS (配置 SUSFS)
@@ -573,7 +591,7 @@ jobs:
             cp "$image_path" ./AnyKernel3/Image
             cp "$image_path" kernel_workspace/out/Final-Image-Find/Image
             cd AnyKernel3
-            zip -r ../AnyKernel3_SukiSU-Ultra_${{ env.KERNEL_VERSION }}.zip ./*
+            zip -r ../AnyKernel3_SukiSU-Ultra_${{ env.KSUVER }}.zip ./*
           fi
           
       - name: 📥 Download Latest SukiSU-Ultra APK from CI (从CI下载最新的SukiSU-Ultra安装包)
@@ -634,8 +652,7 @@ jobs:
 
       - name: 🔧 设置环境变量
         run: |
-          
-          FULL_VERSION=${{ format('{0}.50-{1}', env.TKERNEL_VERSION, env.KERNEL_NAME) }}
+          FULL_VERSION=${{ format('{0}.{1}-{2}', env.KERNEL_VERSION, env.KERNEL_SUBLEVEL, env.DEFAULT_SUFFIX) }}
           echo "FULL_VERSION=$FULL_VERSION" >> $GITHUB_ENV
           export FULL_VERSION=$FULL_VERSION
           TIME="$(TZ='Asia/Shanghai' date +'%y%m%d%H%M%S')"
@@ -657,11 +674,11 @@ jobs:
             ### 📱 欧加真 Android 15/16 ${{ env.KSU_BRANCH }}  构建信息
             - 内核版本号: ${{ env.FULL_VERSION }}
             - 编译时间: ${{ env.TIME_FORM }}
-            - 机型：欧加真天玑9400+ Android 15/16内核通用
+            - 机型：${{ github.event.inputs.DEVICES_NAME || 'oneplus_ace5_ultra' }} + Android 15内核通用
             - 特性：${{ env.KSU_BRANCH }} + SUSFS + 风驰内核
             - 推荐系统：ColorOS 15/16
             ### ⏫️ 更新内容：
-            - 更新${{ env.KSU_BRANCH }}至最新版本（${{ env.KSU_API_VERSION }}）
+            - 更新${{ env.KSU_BRANCH }}至最新版本（${{ env.KSUVER }}）
           draft: false
           prerelease: false
           files: |
